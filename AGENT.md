@@ -5,7 +5,7 @@ This repo contains an Oh-My-Zsh plugin that turns a natural-language request int
 ## Behavior
 
 - Trigger: only activates when the current ZLE buffer begins with a comment request (`# ...`).
-- If it matches: strip leading whitespace and leading `#`, send the request to the opencode worker, then replace the entire `BUFFER` with the generated command(s).
+- If it matches: send the current buffer to the generator agent. The agent decides whether to echo the user's `# ...` prompt lines (persistence) and may add its own `## ...` notes.
 - If it does not match: fall back to the original TAB completion widget.
 - No worker output is printed to the terminal during ZLE.
 
@@ -27,9 +27,9 @@ This repo contains an Oh-My-Zsh plugin that turns a natural-language request int
 ## Opencode Integration
 
 - Uses `opencode run --format json` (NDJSON events) so we can parse a `sessionID`.
-- Default backend/attach is empty (cold-start per request).
+- Default run mode is cold-start (no server attach).
 - Configurable: `agent` (default `shell_cmd_generator`), optional `variant`, `title` (default `zsh shell assistant`), log level mapping.
-- Disposable sessions: optional `DELETE /session/<id>` after collecting output.
+- Disposable sessions: optional `DELETE /session/<id>` after collecting output (requires backend URL).
 
 - `OPENCODE_CONFIG_DIR` is set for the opencode subprocess (default: `${plugin_dir}/opencode`).
 - Default agent is `shell_cmd_generator` (loaded from `OPENCODE_CONFIG_DIR/agents/shell_cmd_generator.md`).
