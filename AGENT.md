@@ -31,12 +31,11 @@ This repo contains an Oh-My-Zsh plugin that turns a natural-language request int
 - Configurable: `agent` (default `shell_cmd_generator`), optional `variant`, `title` (default `zsh shell assistant`), log level mapping.
 - Disposable sessions: optional `DELETE /session/<id>` after collecting output (requires backend URL).
 
-- `OPENCODE_CONFIG_DIR` is set for the opencode subprocess (default: `${plugin_dir}/opencode`).
-- Default agent is `shell_cmd_generator` (loaded from `OPENCODE_CONFIG_DIR/agents/shell_cmd_generator.md`).
+- In cold mode, the plugin ensures its bundled agents exist in `${Z_OC_TAB_OPENCODE_WORKDIR}/.opencode/agents/`.
 
 ### Cold Start vs Attach Mode
 
-- Default (safe): do not attach; each TAB request starts opencode as needed and uses `OPENCODE_CONFIG_DIR=${plugin_dir}/opencode`, so the bundled agent works out of the box.
+ - Default (safe): do not attach; each TAB request starts opencode as needed.
 - Optional (fast): attach to a running opencode server to avoid warmup overhead.
   - Current upstream limitation: `opencode run --attach ... --agent ...` is broken upstream, so attach mode cannot reliably select an agent until that PR lands.
   - Track: https://github.com/anomalyco/opencode/pull/11812
