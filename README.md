@@ -107,6 +107,24 @@ Note: this plugin targets macOS and Linux. If you use Windows, run it under WSL.
 
 Note: the `export` configurations shown below are just examples. For the full list, see _Configuration_.
 
+> [!IMPORTANT]
+> If you use other plugins that customize TAB completion (especially `fzf-tab`), you have two options:
+> 
+> 1) Load `zsh-opencode-tab` **last** (after `fzf-tab` and anything else that re-binds TAB).
+> 2) Or keep TAB fully owned by your completion plugin and bind this plugin to another key via `Z_OC_TAB_BINDKEY`.
+>
+> <details>
+> <summary><strong>Non-technical explanation (TL;DR)</strong></summary>
+>
+> In zsh, a key press can only call one thing.
+>
+> This plugin respects what is already bound to the chosen key (`Z_OC_TAB_BINDKEY`): it steps in only when the prompt line begins with `# ...`; in all other cases, it calls the original widget that was bound to that key.
+>
+> If another plugin grabs the same key *after* this one loads (common with `fzf-tab`), zsh will call that newer binding directly and this plugin will never see the key press.
+>
+> On this basis, we recommend option 1) because the binding of this plugin is triggered on a very specific criterion and is unlikely to interfere with any other plugins already installed on your system.
+> </details>
+
 **Oh My Zsh:**
 
 1) Clone this repo into your custom plugins directory:
@@ -122,7 +140,11 @@ export \
 	Z_OC_TAB_OPENCODE_MODEL="anthropic/claude-3-5-haiku-latest" \
   Z_OC_TAB_EXPLAIN_PRINT_CMD='bat --plain --color=always --decorations=always --language=markdown --paging=never {}'
 
+# IMPORTANT: keep this after plugins like fzf-tab that re-bind TAB.
 plugins+=(zsh-opencode-tab)
+
+# Alternative: bind to a different key (example: Ctrl-G) to avoid TAB conflicts.
+# export Z_OC_TAB_BINDKEY='^G'
 ```
 
 3) Reload your shell:
@@ -139,21 +161,27 @@ exec zsh
 
 ```zsh
 Z_OC_TAB_OPENCODE_MODEL="anthropic/claude-3-5-haiku-latest"
+# Optional: bind to a different key than TAB (example: Ctrl-G)
+# export Z_OC_TAB_BINDKEY='^G'
 source "$HOME/local/share/my-zsh-plugins/zsh-opencode-tab/zsh-opencode-tab.plugin.zsh"
 ```
 
 **zinit:**
 
+Optional: if you want to bind this plugin to a different key than TAB, add e.g. `Z_OC_TAB_BINDKEY="^G"` to the `atinit` export list.
+
 ```zsh
-wait'0c' atinit'
-  export Z_OC_TAB_OPENCODE_MODEL="google/gemini-2.5-flash" \
-  Z_OC_TAB_EXPLAIN_PRINT_CMD='bat --plain --color=always --decorations=always --language=markdown --paging=never {}' \
-  $__local_plugin_path/zsh-opencode-tab
+zinit lucid wait depth=1 from'gh' compile for \
+  wait'0c' atinit'export Z_OC_TAB_OPENCODE_MODEL="anthropic/claude-3-5-haiku-latest" \
+    Z_OC_TAB_SPINNER_BG_HEX="#24273A" \
+    Z_OC_TAB_OPENCODE_RUN_MODE="cold" \
+    Z_OC_TAB_EXPLAIN_PRINT_CMD="bat --plain --color=always --decorations=always --language markdown --paging=never {}"' \
+  @alberti42/zsh-opencode-tab
 ```
 
 ## Usage
 
-Write a request preceded by `#` and press TAB. The plugin updates your prompt with generated command(s), ready to edit/run.
+Write a request preceded by `#` and press TAB (or your configured key via `Z_OC_TAB_BINDKEY`). The plugin updates your prompt with generated command(s), ready to edit/run.
 
 - If the line does not start with `#`, TAB behaves as usual (your original widget is preserved).
 - When you press TAB, the generator agent receives your whole prompt buffer (including any previous draft you kept there).
@@ -263,6 +291,10 @@ The plugin reads these environment variables at load time:
   - Enable debug behavior (internal).
 - `Z_OC_TAB_DEBUG_LOG` (default: `/tmp/zsh-opencode-tab.log`)
   - Path to append debug logs to when `Z_OC_TAB_DEBUG=1`.
+- `Z_OC_TAB_BINDKEY` (default: `^I`)
+  - Which key sequence triggers this plugin (bindkey notation).
+  - Default is TAB (i.e., `^I`). Example alternative: `^G` (Ctrl-G).
+  - If another plugin re-binds TAB (e.g. `fzf-tab`), set this to a different key to avoid conflicts.
 - `Z_OC_TAB_PERSIST_DEFAULT` (default: `1`)
   - Default persistence for plain `# ...` requests.
   - `1`: keep the request line above the generated output.
@@ -373,15 +405,22 @@ Tip: when you are iterating on the agent prompt, use cold start (`Z_OC_TAB_OPENC
     - `Z_OC_TAB_OPENCODE_BACKEND_URL='http://127.0.0.1:4096'`
   - The plugin already keeps its two agent files under `${Z_OC_TAB_OPENCODE_WORKDIR}/.opencode/agents/`, and attach mode can use those too.
 
-- Known upstream rough edges (so you're not surprised):
-  - Agent selection in attach mode can be unreliable (`--agent` may be ignored): https://github.com/anomalyco/opencode/pull/11812
-  - Password-protected server is currently buggy upstream: https://github.com/anomalyco/opencode/pull/9095
-  - If either bites you, switch back to cold start.
+> [!WARNING]
+> Known upstream rough edges (so you're not surprised):
+> 
+> - Attach mode may ignore *which helper* you asked for.
+>   - Under the hood, opencode is supposed to honor `--agent shell_cmd_generator` or `--agent shell_cmd_explainer` when you attach to a server.
+>   - Upstream status: broken right now; a fix exists but is not merged yet: https://github.com/anomalyco/opencode/pull/11812
+>   - For now, we recommend using cold start (default).
+> - Password-protected server can be buggy upstream ("Unauthorized" on attach even with the right password): https://github.com/anomalyco/opencode/pull/9095
 
 ## Troubleshooting
 
 - Nothing happens on TAB:
   - The plugin only triggers when the line starts with `#`.
+  - If you use `fzf-tab` (or any plugin that re-binds TAB), load `zsh-opencode-tab` last or set `Z_OC_TAB_BINDKEY` to another key.
+  - Quick check (default TAB): `bindkey -M emacs '^I'` should point to `_zsh_opencode_tab_or_fallback`.
+  - Quick check (example Ctrl-G): `bindkey -M emacs '^G'` should point to `_zsh_opencode_tab_or_fallback`.
 - The spinner runs but the buffer does not change:
   - Ensure `opencode` is in `PATH`.
   - If using attach mode, ensure the opencode server is running at `Z_OC_TAB_OPENCODE_BACKEND_URL`.

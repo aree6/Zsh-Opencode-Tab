@@ -175,15 +175,14 @@ function _zsh_opencode_tab.spinner.__set_bg() {
 
   local bg_hex=${_zsh_opencode_tab[spinner.bg_hex]}
   if [[ -n $bg_hex ]]; then
+    _zsh_opencode_tab[spinner.state.bg_transparent]=0
     _zsh_opencode_tab.spinner.__hex_to_rgb $bg_hex
     _zsh_opencode_tab[spinner.state.bg_r]=${reply[1]}
     _zsh_opencode_tab[spinner.state.bg_g]=${reply[2]}
     _zsh_opencode_tab[spinner.state.bg_b]=${reply[3]}
   else
     # Transparent background - no RGB values needed
-    _zsh_opencode_tab[spinner.state.bg_r]=''
-    _zsh_opencode_tab[spinner.state.bg_g]=''
-    _zsh_opencode_tab[spinner.state.bg_b]=''
+    _zsh_opencode_tab[spinner.state.bg_transparent]=1
   fi
 }
 
@@ -208,7 +207,7 @@ function _zsh_opencode_tab.spinner.__set_inactive_fg() {
   local -F bg_b=${_zsh_opencode_tab[spinner.state.bg_b]}
   local -F inactive_factor=${_zsh_opencode_tab[spinner.inactive_factor]}
 
-  if [[ -z $bg_r ]]; then
+  if (( ${_zsh_opencode_tab[spinner.state.bg_transparent]} )); then
     # Transparent background - use base color directly
     _zsh_opencode_tab.spinner.__rgb_to_hex $base_r $base_g $base_b
     _zsh_opencode_tab[spinner.state.inactive_fg]=$REPLY
@@ -282,7 +281,7 @@ function _zsh_opencode_tab.spinner.__derive_trail_palette() {
     (( g > 1.0 )) && g=1.0
     (( b > 1.0 )) && b=1.0
 
-    if [[ -n $bg_r ]]; then
+    if (( ! ${_zsh_opencode_tab[spinner.state.bg_transparent]} )); then
       (( inv = 1.0 - alpha ))
       (( r = r * alpha + bg_r * inv ))
       (( g = g * alpha + bg_g * inv ))
